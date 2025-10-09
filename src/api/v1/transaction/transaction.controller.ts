@@ -15,18 +15,16 @@ export default class TransactionController extends MainController<ITransaction> 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const body = await c.req.json();
     const payload = await TransactionPayloadAISchema.parseAsync(body);
-    const { result } = await c.env.QUICK_KODE_MESSAGE_ANALYSIS.run(
-      "@cf/meta/llama-3.1-8b-instruct",
-      {
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a JSON extraction engine that extract payment info from SMS messages. You return the extracted data in a JSON format.",
-          },
-          {
-            role: "user",
-            content: `
+    const { result } = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a JSON extraction engine that extract payment info from SMS messages. You return the extracted data in a JSON format.",
+        },
+        {
+          role: "user",
+          content: `
                   Extract payment info from ${payload.message}.
                   phone_number: ${payload.phone_number}
                   SMS sender -> ${payload.sender}
@@ -43,10 +41,9 @@ export default class TransactionController extends MainController<ITransaction> 
                   )}.
                 Give me the json only, no other text. 
                 `,
-          },
-        ],
-      }
-    );
+        },
+      ],
+    });
     return c.json(result);
   });
 }
