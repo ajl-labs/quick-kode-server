@@ -4,10 +4,18 @@ meta {
   seq: 3
 }
 
-get {
+post {
   url: {{BASE_URL}}/transactions/from-ai-prompt
-  body: none
+  body: json
   auth: inherit
+}
+
+body:json {
+  {
+    "message":"*165*S*50000 RWF transferred to Divine Mireille ASIFIWE (250780699957) at 2025-10-09 15:29:54 .Fee : 250 RWF. Balance: 29901 RWF. *RW##",
+    "sender":"M-Money",
+    "phone_number":"+250789277275"
+  }
 }
 
 settings {

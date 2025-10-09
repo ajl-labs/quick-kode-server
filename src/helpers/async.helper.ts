@@ -2,10 +2,9 @@ import { Context } from "hono";
 import z, { ZodError } from "zod";
 
 export const asyncHandler = (fn: Function) => {
-  console.log("asyncHandler initialized");
   return async (c: Context) => {
     try {
-      await fn(c);
+      return await fn(c);
     } catch (error) {
       if (error instanceof ZodError) {
         return c.json(
