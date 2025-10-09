@@ -29,6 +29,8 @@ jobs:
       - name: Create .env file
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" >> .env
+          echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
 
         # Run database migrations
       - name: Run DB migrations
