@@ -40,6 +40,7 @@ export class MainController<T> extends DatabaseModel {
     try {
       const body = await this.context.req.json();
       const payload = this.schema?.parse(body) ?? body;
+      console.log(payload);
       const newRecord = await this.createRecord<T>(this.table, payload);
       return this.context.json(newRecord, 201);
     } catch (error) {

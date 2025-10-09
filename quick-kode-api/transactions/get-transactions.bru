@@ -7,7 +7,12 @@ meta {
 get {
   url: {{BASE_URL}}/transactions
   body: none
-  auth: inherit
+  auth: basic
+}
+
+auth:basic {
+  username: {{USERNAME}}
+  password: {{PASSWORD}}
 }
 
 settings {
