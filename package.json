@@ -38,6 +38,6 @@
     "dev": "wrangler dev",
     "start": "wrangler dev",
     "build": "wrangler build",
-    "db:migrate": "ts-node ./src/database/database.migration.ts"
+    "db:migration": "ts-node ./src/database/database.migration.ts"
   }
 }
