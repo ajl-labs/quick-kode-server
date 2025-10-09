@@ -15,7 +15,7 @@ export default class TransactionController extends MainController<ITransaction> 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const body = await c.req.json();
     const payload = await TransactionPayloadAISchema.parseAsync(body);
-    const result = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+    const { response } = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
       messages: [
         {
           role: "system",
@@ -44,7 +44,18 @@ export default class TransactionController extends MainController<ITransaction> 
         },
       ],
     });
-    console.log(result);
-    return c.json(result);
+
+    const transactionPayload = await this.schema?.parseAsync({
+      ...JSON.parse(response || "{}"),
+      message: payload.message,
+      phone_number: payload.phone_number,
+      sender: payload.sender,
+    });
+
+    const newRecord = await this.createRecord<IDatabaseRecord<ITransaction>>(
+      this.table,
+      transactionPayload!
+    );
+    return this.context.json(newRecord, 201);
   });
 }
