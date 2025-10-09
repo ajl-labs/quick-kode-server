@@ -8,7 +8,10 @@ export const TransactionSchema = zod.object({
   recipient: zod.string().optional(),
   sender: zod.string().optional(),
   phone_number: zod.string().max(15).optional(),
-  completed_at: zod.date().optional(),
+  completed_at: zod
+    .string()
+    .transform((date) => new Date(date))
+    .optional(),
 });
 
 export type ITransaction = zod.infer<typeof TransactionSchema>;

@@ -31,7 +31,7 @@ export default class TransactionController extends MainController<ITransaction> 
                   message -> ${payload.message}
 
                   Identify transaction type: "DEBIT" or "CREDIT".
-                  Extract: amount, fees, sender, recipient, date completed at in timestamp format.
+                  Extract: amount, fees, sender, recipient, date as completed_at which is timestamp.
                   
                   If sender missing → "sender": "self".
                   If recipient missing → "recipient": "self".
