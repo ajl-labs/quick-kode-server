@@ -39,7 +39,7 @@ app.notFound((c) => {
 // Global error handler
 app.onError((err, c) => {
   console.error("Unhandled error:", err);
-  const errorStatus = (err as any).res.status || 500;
+  const errorStatus = (err as any).res?.status || 500;
   const errorBoy = {
     error: "Internal Server Error",
     message: "An unexpected error occurred.",

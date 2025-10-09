@@ -1,0 +1,11 @@
+name = "quick-kode-server"
+main = "src/index.ts"
+compatibility_date = "2025-09-03"
+compatibility_flags = ["nodejs_compat"]
+upload_source_maps = true
+
+[observability]
+enabled = true
+
+[ai]
+binding = "AI"
