@@ -1,5 +1,5 @@
 import { getPagination } from "./query.helpers";
-import z, { ZodError, ZodObject, ZodRawShape } from "zod";
+import { ZodObject, ZodRawShape } from "zod";
 import { Context } from "hono";
 import { DatabaseModel } from "../database/database.model";
 import { asyncHandler } from "./async.helper";
@@ -31,7 +31,7 @@ export class MainController<T> extends DatabaseModel {
 
   create = asyncHandler(async () => {
     const body = await this.context.req.json();
-    const payload = (await this.schema?.parseAsync(body)) ?? body;
+    const payload = (await this.schema?.strict().parseAsync(body)) ?? body;
     const newRecord = await this.createRecord<T>(this.table, payload);
     return this.context.json(newRecord, 201);
   });

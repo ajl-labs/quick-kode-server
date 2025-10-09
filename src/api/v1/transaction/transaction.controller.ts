@@ -14,7 +14,7 @@ export default class TransactionController extends MainController<ITransaction> 
 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const body = await c.req.json();
-    const payload = await TransactionPayloadAISchema.parseAsync(body);
+    const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
     const { response } = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
       messages: [
         {
@@ -31,14 +31,15 @@ export default class TransactionController extends MainController<ITransaction> 
                   message -> ${payload.message}
 
                   Identify transaction type: "DEBIT" or "CREDIT".
-                  Extract: amount, fees, sender, recipient, date (CAT timezone), and timestamp.
+                  Extract: amount, fees, sender, recipient, date completed at in timestamp format.
                   
                   If sender missing → "sender": "self".
                   If recipient missing → "recipient": "self".
 
                   Return JSON, this the validation schema ${JSON.stringify(
-                    TransactionSchema
-                  )}.
+                    TransactionSchema.shape
+                  )}, ensure that the response has all fields and is valid.
+
                 Give me the json only, no other text. 
                 `,
         },
