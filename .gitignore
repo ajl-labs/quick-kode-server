@@ -199,3 +199,4 @@ dist
 !.dev.vars.example
 **/*environment*
 quick-kode-api/environments
+quick-kode-api/environments/development.bru
