@@ -1,0 +1,43 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy Worker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Node.js, required for npm
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Specify your Node.js version
+
+      # Install project dependencies
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+        # Build .env file with DATABASE_URL
+      - name: Create .env file
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+
+        # Run database migrations
+      - name: Run DB migrations
+        run: yarn db:migration
+      # Run the official Wrangler action to deploy your Worker
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          # This is the secret API token for Cloudflare that you need to create
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # This is your Cloudflare account ID
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
