@@ -32,7 +32,7 @@ jobs:
 
         # Run database migrations
       - name: Run DB migrations
-        run: yarn db:migration
+        run: yarn db:migrate
       # Run the official Wrangler action to deploy your Worker
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
