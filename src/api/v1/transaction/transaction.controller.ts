@@ -31,11 +31,10 @@ export default class TransactionController extends MainController<ITransaction> 
                   message -> ${payload.message}
 
                   Identify transaction type: "DEBIT" or "CREDIT".
-                  Identify debit transaction category: "transfer", "payment", "withdrawal", "purchase".
-                  Identify credit transaction category: "transfer", "refund", "deposit".
+                  Identify transaction category, should be one of: ["transfer","withdrawal","goods_payment","airtime_purchase","loan_payment","fund_transfer","refund","deposit","other"].
                   Identify the amount of money involved in the transaction, return as number only, no currency symbol.
                   Identify the fees involved in the transaction, return as number only, no currency symbol. If no fees, return 0.
-                  Identify the date of the transaction, if no date, use current date. Return as timestamp.
+                  Identify the date of the transaction, if no date, use current date. Return as UTC datetime.
                   Identify the payment code, if no payment code, return null.
                   Identify the transaction reference, if no transaction reference, return null.
                   Identify the  sender or recipient:
@@ -46,14 +45,15 @@ export default class TransactionController extends MainController<ITransaction> 
                     TransactionSchema.shape
                   )}, ensure that the response has all fields and is valid.
                 
-                Give me the json only, no other text. 
+                Give me a valid json only, no other text. 
                 If you believe the message is not a transaction, return null.
                 `,
         },
       ],
     });
 
-    const aiResponse = JSON.parse(response || null);
+    const aiResponse = JSON.parse(response || "{}");
+
     if (!aiResponse || !aiResponse.amount) {
       return this.context.json(
         {

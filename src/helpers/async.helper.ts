@@ -6,6 +6,7 @@ export const asyncHandler = (fn: Function) => {
     try {
       return await fn(c);
     } catch (error) {
+      console.log(error);
       if (error instanceof ZodError) {
         return c.json(
           {
