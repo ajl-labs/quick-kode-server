@@ -34,12 +34,13 @@ export default class TransactionController extends MainController<ITransaction> 
              - SMS sender -> ${payload.sender}
              - message -> ${payload.message}
              - type must be 'DEBIT' or 'CREDIT'. 
-             - Identify transaction category, and set it to be one of: 'transfer','withdrawal','goods_payment','airtime_purchase','loan_payment','fund_transfer','refund','deposit','other'. 
+             - Identify transaction category, and set it to be one of: 'transfer','withdrawal','goods_payment','airtime_purchase','loan_payment','fund_transfer', 'loan_disbursement','refund','deposit','other'. 
              - amount and fees must be numbers only (no currency symbol); fees default to 0 if missing. 
              - date must be ISO8601 UTC; if missing use current UTC datetime. 
              - payment_code and transaction_reference must be string or null. 
              - If sender missing set 'sender':'self'. 
              - If recipient missing set 'recipient':'self'. 
+             - Generate summary based on the message. i.e "Paid RWF 200 to John", or "Received RWF 500 from Jane", or "Received RWF 100 loan from MoCash", etc..
              - If the message is not a transaction return null. 
              - Output JSON only—no text, explanation, or code blocks.
                 `,

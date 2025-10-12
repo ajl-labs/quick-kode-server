@@ -10,6 +10,7 @@ export const transactionCommonSchema = zod.object({
       "goods_payment",
       "airtime_purchase",
       "loan_payment",
+      "loan_disbursement",
       "fund_transfer",
       "refund",
       "deposit",
@@ -18,6 +19,7 @@ export const transactionCommonSchema = zod.object({
     .default("other"),
   payment_code: zod.string().optional().nullable(),
   transaction_reference: zod.string().optional().nullable(),
+  summary: zod.string().optional().nullable(),
 });
 
 export const TransactionSchema = transactionCommonSchema.extend({
