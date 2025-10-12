@@ -7,6 +7,9 @@ import {
 } from "./transaction.schema";
 import { asyncHandler } from "../../../helpers/async.helper";
 import z from "zod";
+import { runGemini } from "../../../service/ai/exterinal.LLM.service";
+import { cleanAndParseJson } from "../../../helpers/ai.helper";
+import { classicNameResolver } from "typescript";
 export default class TransactionController extends MainController<ITransaction> {
   constructor(c: Context) {
     super(c, "transactions", TransactionSchema);
@@ -15,16 +18,9 @@ export default class TransactionController extends MainController<ITransaction> 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const body = await c.req.json();
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
-    const { response } = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      messages: [
-        {
-          role: "system",
-          content:
-            "Extract payment info from SMS and return only valid JSON, no text or code blocks.",
-        },
-        {
-          role: "user",
-          content: `
+    const aiInstruction =
+      "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
+    const aiContent = `
             Extract payment info from the SMS below and return only one valid JSON object matching this schema: 
               SMS: "${payload.message}"
               Schema: "${z.toJSONSchema(TransactionSchema)}"
@@ -43,14 +39,41 @@ export default class TransactionController extends MainController<ITransaction> 
              - Generate summary based on the message. i.e "Paid RWF 200 to John", or "Received RWF 500 from Jane", or "Received RWF 100 loan from MoCash", etc..
              - If the message is not a transaction return null. 
              - Output JSON only—no text, explanation, or code blocks.
-                `,
-        },
-      ],
-    });
+                `;
 
-    const aiResponse = JSON.parse(response || "{}");
+    const response = await runGemini(aiInstruction, aiContent)
+      .then((res: any) => {
+        try {
+          const geminiResponse = cleanAndParseJson(res[0].text);
+          return geminiResponse;
+        } catch (error) {
+          console.error("Failed to parse Gemini response:", error);
+          return null;
+        }
+      })
+      .catch(async (err) => {
+        const { response: llamaResponse } = await c.env.AI.run(
+          "@cf/meta/llama-3.1-8b-instruct",
+          {
+            messages: [
+              {
+                role: "system",
+                content: aiInstruction,
+              },
+              {
+                role: "user",
+                content: aiContent,
+              },
+            ],
+          }
+        ).catch((err: any) => {
+          throw err;
+        });
+        return cleanAndParseJson(llamaResponse);
+      });
 
-    if (!aiResponse || !aiResponse.amount) {
+    if (!response?.amount && !body?.message?.includes("RWF")) {
+      console.log("Invalid transaction message:", payload.message);
       return this.context.json(
         {
           error: "Invalid transaction message",
@@ -62,7 +85,7 @@ export default class TransactionController extends MainController<ITransaction> 
 
     const defaultData = new Date();
     const transactionPayload = await this.schema?.parseAsync({
-      ...aiResponse,
+      ...response,
       message: payload.message,
       phone_number: payload.phone_number,
       sender: payload.sender,
@@ -71,7 +94,7 @@ export default class TransactionController extends MainController<ITransaction> 
         ? new Date(payload.message_timestamp)
         : defaultData,
       completed_at: new Date(
-        aiResponse.completed_at || defaultData
+        response.completed_at || defaultData
       ).toISOString(),
     });
 
