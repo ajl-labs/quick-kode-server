@@ -1,0 +1,21 @@
+meta {
+  name: /update-transaction
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{BASE_URL}}/transactions/ec9e528a-3356-45a4-962b-391e345c0870
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "label":"foot"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,6 +1,6 @@
-import { PoolClient, QueryResult, QueryResultRow } from 'pg';
-import { format, quoteIdent, quoteLiteral } from 'node-pg-format';
-import { Context } from 'hono';
+import { PoolClient, QueryResult, QueryResultRow } from "pg";
+import { format, quoteIdent, quoteLiteral } from "node-pg-format";
+import { Context } from "hono";
 
 export class DatabaseModel {
   context?: Context;
@@ -9,14 +9,14 @@ export class DatabaseModel {
   }
   private runQuery = async <T extends QueryResultRow>(
     queryText: string,
-    params?: any[],
+    params?: any[]
   ) => {
-    const client = this.context?.get('db') as PoolClient;
+    const client = this.context?.get("db") as PoolClient;
     try {
       const results = await client.query(queryText, params);
       return results as QueryResult<T>;
     } catch (err) {
-      console.error('Database query error:', err);
+      console.error("Database query error:", err);
       throw err;
     }
   };
@@ -27,10 +27,10 @@ export class DatabaseModel {
     const values = Object.values(payload);
 
     const query = format(
-      'INSERT INTO %I (%s) VALUES (%s) RETURNING *',
+      "INSERT INTO %I (%s) VALUES (%s) RETURNING *",
       table,
-      keys.map(k => quoteIdent(k)).join(', '),
-      values.map(v => quoteLiteral(v)).join(', '),
+      keys.map((k) => quoteIdent(k)).join(", "),
+      values.map((v) => quoteLiteral(v)).join(", ")
     );
 
     const result = await this.runQuery(query);
@@ -39,13 +39,13 @@ export class DatabaseModel {
 
   findAll = async <T>(
     table: string,
-    options: { limit: number; offset: number },
+    options: { limit: number; offset: number }
   ) => {
     const query = format(
-      'SELECT * FROM %I ORDER BY created_at DESC LIMIT %L OFFSET %L;',
+      "SELECT * FROM %I ORDER BY created_at DESC LIMIT %L OFFSET %L;",
       table,
       options.limit,
-      options.offset,
+      options.offset
     );
     const result = await this.runQuery(query);
     return {
@@ -55,11 +55,24 @@ export class DatabaseModel {
   };
 
   findById = async <T>(table: string, id: string) => {
-    const query = format('SELECT * FROM %I WHERE id = %L', table, id);
+    const query = format("SELECT * FROM %I WHERE id = %L", table, id);
     const result = await this.runQuery(query);
     return result.rows[0] as IDatabaseRecord<T> | null;
   };
 
-  update = async () => {};
+  updateRecord = async <T>(table: string, id: string, data: Partial<T>) => {
+    const setClause = Object.entries(data)
+      .map(([key, value]) => `${quoteIdent(key)} = ${quoteLiteral(value)}`)
+      .join(", ");
+    const query = format(
+      "UPDATE %I SET %s WHERE id = %L RETURNING *",
+      table,
+      setClause,
+      id
+    );
+    const result = await this.runQuery(query);
+    return result.rows[0] as IDatabaseRecord<T> | null;
+  };
+
   softDelete = async () => {};
 }

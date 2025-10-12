@@ -31,10 +31,16 @@ export default class TransactionController extends MainController<ITransaction> 
                   message -> ${payload.message}
 
                   Identify transaction type: "DEBIT" or "CREDIT".
-                  Extract: amount, fees, sender, recipient, date as completed_at which is timestamp.
-                  
-                  If sender missing → "sender": "self".
-                  If recipient missing → "recipient": "self".
+                  Identify debit transaction category: "transfer", "payment", "withdrawal", "purchase".
+                  Identify credit transaction category: "transfer", "refund", "deposit".
+                  Identify the amount of money involved in the transaction, return as number only, no currency symbol.
+                  Identify the fees involved in the transaction, return as number only, no currency symbol. If no fees, return 0.
+                  Identify the date of the transaction, if no date, use current date. Return as timestamp.
+                  Identify the payment code, if no payment code, return null.
+                  Identify the transaction reference, if no transaction reference, return null.
+                  Identify the  sender or recipient:
+                    If sender missing → "sender": "self".
+                    If recipient missing → "recipient": "self".
 
                   Return JSON, this the validation schema ${JSON.stringify(
                     TransactionSchema.shape

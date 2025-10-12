@@ -11,4 +11,6 @@ transactionRouter.post(
   handle(transactionController, "createFromAIPrompt")
 );
 
+transactionRouter.put("/:id", handle(transactionController, "update"));
+
 export { transactionRouter };
