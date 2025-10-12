@@ -9,3 +9,4 @@ enabled = true
 
 [ai]
 binding = "AI"
+remote = true

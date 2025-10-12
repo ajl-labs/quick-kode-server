@@ -6,7 +6,7 @@ import {
   TransactionSchema,
 } from "./transaction.schema";
 import { asyncHandler } from "../../../helpers/async.helper";
-
+import z from "zod";
 export default class TransactionController extends MainController<ITransaction> {
   constructor(c: Context) {
     super(c, "transactions", TransactionSchema);
@@ -20,33 +20,28 @@ export default class TransactionController extends MainController<ITransaction> 
         {
           role: "system",
           content:
-            "You are a JSON extraction engine that extract payment info from SMS messages. You return the extracted data in a JSON format.",
+            "Extract payment info from SMS and return only valid JSON, no text or code blocks.",
         },
         {
           role: "user",
           content: `
-                  Extract payment info from ${payload.message}.
-                  phone_number: ${payload.phone_number}
-                  SMS sender -> ${payload.sender}
-                  message -> ${payload.message}
+            Extract payment info from the SMS below and return only one valid JSON object matching this schema: 
+              SMS: "${payload.message}"
+              Schema: "${z.toJSONSchema(TransactionSchema)}"
 
-                  Identify transaction type: "DEBIT" or "CREDIT".
-                  Identify transaction category, should be one of: ["transfer","withdrawal","goods_payment","airtime_purchase","loan_payment","fund_transfer","refund","deposit","other"].
-                  Identify the amount of money involved in the transaction, return as number only, no currency symbol.
-                  Identify the fees involved in the transaction, return as number only, no currency symbol. If no fees, return 0.
-                  Identify the date of the transaction, if no date, use current date. Return as UTC datetime.
-                  Identify the payment code, if no payment code, return null.
-                  Identify the transaction reference, if no transaction reference, return null.
-                  Identify the  sender or recipient:
-                    If sender missing → "sender": "self".
-                    If recipient missing → "recipient": "self".
-
-                  Return JSON, this the validation schema ${JSON.stringify(
-                    TransactionSchema.shape
-                  )}, ensure that the response has all fields and is valid.
-                
-                Give me a valid json only, no other text. 
-                If you believe the message is not a transaction, return null.
+            Rules: 
+             - phone_number: ${payload.phone_number}
+             - SMS sender -> ${payload.sender}
+             - message -> ${payload.message}
+             - type must be 'DEBIT' or 'CREDIT'. 
+             - Identify transaction category, and set it to be one of: 'transfer','withdrawal','goods_payment','airtime_purchase','loan_payment','fund_transfer','refund','deposit','other'. 
+             - amount and fees must be numbers only (no currency symbol); fees default to 0 if missing. 
+             - date must be ISO8601 UTC; if missing use current UTC datetime. 
+             - payment_code and transaction_reference must be string or null. 
+             - If sender missing set 'sender':'self'. 
+             - If recipient missing set 'recipient':'self'. 
+             - If the message is not a transaction return null. 
+             - Output JSON only—no text, explanation, or code blocks.
                 `,
         },
       ],
@@ -64,6 +59,7 @@ export default class TransactionController extends MainController<ITransaction> 
       );
     }
 
+    const defaultData = new Date();
     const transactionPayload = await this.schema?.parseAsync({
       ...aiResponse,
       message: payload.message,
@@ -72,7 +68,10 @@ export default class TransactionController extends MainController<ITransaction> 
       message_id: payload.message_id,
       message_timestamp: payload.message_timestamp
         ? new Date(payload.message_timestamp)
-        : new Date(),
+        : defaultData,
+      completed_at: new Date(
+        aiResponse.completed_at || defaultData
+      ).toISOString(),
     });
 
     const newRecord = await this.createRecord<IDatabaseRecord<ITransaction>>(

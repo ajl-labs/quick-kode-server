@@ -1,8 +1,8 @@
 import zod from "zod";
 
 export const transactionCommonSchema = zod.object({
-  sender: zod.string().optional(),
-  phone_number: zod.string().max(15).optional(),
+  sender: zod.string().optional().nullable(),
+  phone_number: zod.string().max(15).optional().nullable(),
   transaction_category: zod
     .enum([
       "transfer",
@@ -16,20 +16,18 @@ export const transactionCommonSchema = zod.object({
       "other",
     ])
     .default("other"),
-  payment_code: zod.string().optional(),
-  transaction_reference: zod.string().optional(),
+  payment_code: zod.string().optional().nullable(),
+  transaction_reference: zod.string().optional().nullable(),
 });
+
 export const TransactionSchema = transactionCommonSchema.extend({
   amount: zod.number().min(0),
   fees: zod.number().min(0).default(0),
   type: zod.enum(["DEBIT", "CREDIT"]),
   message: zod.string(),
   recipient: zod.string().optional(),
-  completed_at: zod
-    .string()
-    .transform((date) => new Date(date))
-    .optional(),
-  label: zod.string().optional(),
+  completed_at: zod.string().optional().nullable(),
+  label: zod.string().optional().nullable(),
 });
 
 export type ITransaction = zod.infer<typeof TransactionSchema>;
