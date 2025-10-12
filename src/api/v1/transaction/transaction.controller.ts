@@ -39,15 +39,27 @@ export default class TransactionController extends MainController<ITransaction> 
                   Return JSON, this the validation schema ${JSON.stringify(
                     TransactionSchema.shape
                   )}, ensure that the response has all fields and is valid.
-
+                
                 Give me the json only, no other text. 
+                If you believe the message is not a transaction, return null.
                 `,
         },
       ],
     });
 
+    const aiResponse = JSON.parse(response || null);
+    if (!aiResponse || !aiResponse.amount) {
+      return this.context.json(
+        {
+          error: "Invalid transaction message",
+          code: "INVALID_TRANSACTION_MESSAGE",
+        },
+        400
+      );
+    }
+
     const transactionPayload = await this.schema?.parseAsync({
-      ...JSON.parse(response || "{}"),
+      ...aiResponse,
       message: payload.message,
       phone_number: payload.phone_number,
       sender: payload.sender,
