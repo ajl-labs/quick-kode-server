@@ -58,7 +58,6 @@ export const runMigrations = async (action: MigrationActionType) => {
     const files = fs
       .readdirSync(MIGRATION_DIR)
       .filter((file) => file.endsWith(".migration.ts"));
-
     const applied = await getAppliedMigrations(client);
 
     if (action === MigrationActionType.SHOW) {

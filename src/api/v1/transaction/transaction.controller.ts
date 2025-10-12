@@ -51,6 +51,10 @@ export default class TransactionController extends MainController<ITransaction> 
       message: payload.message,
       phone_number: payload.phone_number,
       sender: payload.sender,
+      message_id: payload.message_id,
+      message_timestamp: payload.message_timestamp
+        ? new Date(payload.message_timestamp)
+        : new Date(),
     });
 
     const newRecord = await this.createRecord<IDatabaseRecord<ITransaction>>(

@@ -20,6 +20,8 @@ export const TransactionPayloadAISchema = zod.object({
   message: zod.string(),
   sender: zod.string().optional(),
   phone_number: zod.string().max(15).optional(),
+  message_timestamp: zod.number().optional().nullable(),
+  message_id: zod.string(),
 });
 
 export type ITransactionPayloadAI = zod.infer<
