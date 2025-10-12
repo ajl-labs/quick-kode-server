@@ -29,9 +29,6 @@ jobs:
       - name: Create .env file
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-          echo "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" >> .env
-          echo "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}" >> .env
-          echo "GOOGLE_GEMINI_API_KEY=${{ secrets.GOOGLE_GEMINI_API_KEY }}" >> .env
 
         # Run database migrations
       - name: Run DB migrations
@@ -48,9 +45,10 @@ jobs:
             BASIC_AUTH_USERNAME
             BASIC_AUTH_PASSWORD
             DATABASE_URL
+            MY_GOOGLE_GEMINI_API_KEY
         env:
           NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           BASIC_AUTH_USERNAME: ${{ secrets.BASIC_AUTH_USERNAME }}
           BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
-          GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
+          MY_GOOGLE_GEMINI_API_KEY: ${{ secrets.MY_GOOGLE_GEMINI_API_KEY }}
