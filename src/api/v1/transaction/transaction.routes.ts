@@ -5,12 +5,12 @@ import { handle } from "../../../helpers/route.handler";
 const transactionRouter = new Hono();
 
 transactionRouter.get("/", handle(transactionController, "getAll"));
-transactionRouter.post("/", handle(transactionController, "create"));
-transactionRouter.post(
-  "/from-ai-prompt",
-  handle(transactionController, "createFromAIPrompt")
-);
+transactionRouter.post("/", handle(transactionController, "addNewTransaction"));
 
 transactionRouter.put("/:id", handle(transactionController, "update"));
+transactionRouter.get(
+  "/dashboard/stats",
+  handle(transactionController, "getDashboardStats")
+);
 
 export { transactionRouter };

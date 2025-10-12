@@ -75,4 +75,29 @@ export class DatabaseModel {
   };
 
   softDelete = async () => {};
+
+  countRecords = async (table: string) => {
+    const query = format("SELECT COUNT(*) FROM %I", table);
+    const result = await this.runQuery<{ count: string }>(query);
+    return parseInt(result.rows[0]?.count || "0", 10);
+  };
+
+  sumColumn = async (table: string, column: string) => {
+    const query = format("SELECT SUM(%I) FROM %I", column, table);
+    const result = await this.runQuery<{ sum: string | null }>(query);
+    return parseFloat(result.rows[0]?.sum || "0");
+  };
+
+  getLastRecord = async <T>(
+    table: string,
+    orderBy: "created_at" | "updated_at" | "completed_at" = "created_at"
+  ) => {
+    const query = format(
+      "SELECT * FROM %I ORDER BY %I DESC LIMIT 1",
+      table,
+      orderBy
+    );
+    const result = await this.runQuery(query);
+    return result.rows[0];
+  };
 }

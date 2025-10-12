@@ -1,0 +1,15 @@
+meta {
+  name: /get-stasts
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{BASE_URL}}/transactions/dashboard/stats
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

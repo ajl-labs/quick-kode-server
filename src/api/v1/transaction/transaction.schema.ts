@@ -30,6 +30,7 @@ export const TransactionSchema = transactionCommonSchema.extend({
   recipient: zod.string().optional(),
   completed_at: zod.string().optional().nullable(),
   label: zod.string().optional().nullable(),
+  remaining_balance: zod.number().min(0).optional().nullable(),
 });
 
 export type ITransaction = zod.infer<typeof TransactionSchema>;

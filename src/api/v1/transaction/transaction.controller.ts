@@ -8,15 +8,34 @@ import {
 import { asyncHandler } from "../../../helpers/async.helper";
 import z from "zod";
 import { runGemini } from "../../../service/ai/exterinal.LLM.service";
-import { cleanAndParseJson } from "../../../helpers/ai.helper";
-import { classicNameResolver } from "typescript";
+import { cleanAndParseJson } from "../../../helpers/data.parser";
 export default class TransactionController extends MainController<ITransaction> {
   constructor(c: Context) {
     super(c, "transactions", TransactionSchema);
   }
 
+  addNewTransaction = async (c: Context) => {
+    const { aiEnabled } = await c.req.json();
+    if (aiEnabled) {
+      return this.createFromAIPrompt(c);
+    }
+    return this.create(c);
+  };
+
+  getDashboardStats = asyncHandler(async (c: Context) => {
+    const totalTransactions = await this.countRecords(this.table);
+    const balance = await this.getLastRecord(this.table, "created_at");
+    const totalFees = await this.sumColumn(this.table, "fees");
+    return c.json({
+      totalTransactions,
+      balance: balance?.remaining_balance || 0,
+      totalFees,
+    });
+  });
+
   createFromAIPrompt = asyncHandler(async (c: Context) => {
-    const body = await c.req.json();
+    const { aiEnabled, ...body } = await c.req.json();
+    console.log(body);
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
     const aiInstruction =
       "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
@@ -34,6 +53,7 @@ export default class TransactionController extends MainController<ITransaction> 
              - amount and fees must be numbers only (no currency symbol); fees default to 0 if missing. 
              - date must be ISO8601 UTC; if missing use current UTC datetime. 
              - payment_code and transaction_reference must be string or null. 
+             - Balance which is remaining_balance must be a number or null.
              - If sender missing set 'sender':'self'. 
              - If recipient missing set 'recipient':'self'. 
              - Generate summary based on the message. i.e "Paid RWF 200 to John", or "Received RWF 500 from Jane", or "Received RWF 100 loan from MoCash", etc..

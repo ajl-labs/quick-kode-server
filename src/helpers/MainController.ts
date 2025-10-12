@@ -30,7 +30,7 @@ export class MainController<T> extends DatabaseModel {
   });
 
   create = asyncHandler(async () => {
-    const body = await this.context.req.json();
+    const { _aiEnabled, ...body } = await this.context.req.json();
     const payload = (await this.schema?.strict().parseAsync(body)) ?? body;
     const newRecord = await this.createRecord<T>(this.table, payload);
     return this.context.json(newRecord, 201);
@@ -41,7 +41,7 @@ export class MainController<T> extends DatabaseModel {
     if (!id) {
       return this.context.json({ error: "ID is required" }, 400);
     }
-    const body = await this.context.req.json();
+    const { _aiEnabled, ...body } = await this.context.req.json();
     const payload = (await this.schema?.partial().parseAsync(body)) ?? body;
     const updatedRecord = await this.updateRecord<T>(this.table, id, payload);
     if (!updatedRecord) {

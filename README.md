@@ -1,69 +1,32 @@
-# Node.js HTTP Server Template for Cloudflare Workers
+# QuickKode Server Component
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/nodejs-http-server-template)
 
-<!-- dash-content-start -->
 
-A simple Node.js HTTP server template using the built-in `node:http` module, designed to run on Cloudflare Workers.
-
-<!-- dash-content-end -->
+A Cloudflare server component designed to support the [QuickKode](https://github.com/ajl-labs/quick-kode) mobile app. It acts as a webhook endpoint to capture transaction messages, uses AI to analyze and extract transaction details, enables updating transactions, and provides APIs to fetch the latest transaction balance. This integration streamlines transaction management and analysis for QuickKode users.
 
 ## Quick Start
 
 1. **Install dependencies:**
 
    ```bash
-   npm install
+   yarn install
    ```
 
 2. **Run locally:**
 
    ```bash
-   npm run dev
+   yarn dev
    ```
 
 3. **Deploy to Cloudflare Workers:**
    ```bash
-   npx wrangler deploy
+   yarn wrangler deploy
    ```
 
-## Usage
-
-The template creates a basic HTTP server:
-
-```javascript
-import { createServer } from "node:http";
-import { httpServerHandler } from "cloudflare:node";
-
-const server = createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Hello from Node.js HTTP server!");
-});
-
-server.listen(8080);
-export default httpServerHandler({ port: 8080 });
-```
-
-## Configuration
-
-The `wrangler.toml` includes the necessary compatibility flags:
-
-```toml
-compatibility_flags = ["nodejs_compat"]
-compatibility_date = "2025-09-03"
-```
 
 ## Scripts
 
 - `npm start` - Start the server
 - `npm run dev` - Start with hot reload
-- `npm test` - Run tests
-
-## Learn More
-
-- [Cloudflare Workers Node.js HTTP Documentation](https://developers.cloudflare.com/workers/runtime-apis/nodejs/http/)
-- [Node.js HTTP Module](https://nodejs.org/api/http.html)
-
-## License
-
-MIT
+- `yarn migration --help` - See available database migration related commands
