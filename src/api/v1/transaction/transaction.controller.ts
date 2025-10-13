@@ -35,7 +35,6 @@ export default class TransactionController extends MainController<ITransaction> 
 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const { aiEnabled, ...body } = await c.req.json();
-    console.log(body);
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
     const aiInstruction =
       "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
@@ -56,7 +55,7 @@ export default class TransactionController extends MainController<ITransaction> 
              - Balance which is remaining_balance must be a number or null.
              - If sender missing set 'sender':'self'. 
              - If recipient missing set 'recipient':'self'. 
-             - Generate summary based on the message. i.e "Paid RWF 200 to John", or "Received RWF 500 from Jane", or "Received RWF 100 loan from MoCash", etc..
+             - Generate summary based on the message. i.e "Fund transfer to John", or "Received fund from Jane", or "Received loan from MoCash", "Pay good/service to AJL Ltd", etc..
              - If the message is not a transaction return null. 
              - Output JSON only—no text, explanation, or code blocks.
                 `;
