@@ -55,8 +55,12 @@ export default class TransactionController extends MainController<ITransaction> 
              - Balance which is remaining_balance must be a number or null.
              - If sender missing set 'sender':'self'. 
              - If recipient missing set 'recipient':'self'. 
-             - Generate summary based on the message. i.e "Fund transfer to John", or "Received fund from Jane", or "Received loan from MoCash", "Pay good/service to AJL Ltd", etc..
-             - If the message is not a transaction return null. 
+             - Generate summary based on the message and transaction category identified. e.g of summary: 
+                 - if it is transfer then "Money transferred to John", 
+                 - if money was received then "Received money from Jane", 
+                 - if it is a loan then "Received loan from MoCash", 
+                 - if it is a payment or a transaction then "Paid good/service to AJL Ltd", etc..
+             - If the message is not a transaction message return null. 
              - Output JSON only—no text, explanation, or code blocks.
                 `;
 
