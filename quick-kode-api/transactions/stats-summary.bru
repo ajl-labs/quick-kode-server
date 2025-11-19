@@ -1,15 +1,16 @@
 meta {
-  name: /get-stasts
+  name: /stats-summary
   type: http
   seq: 4
 }
 
 get {
-  url: {{BASE_URL}}/transactions/dashboard/stats
+  url: {{BASE_URL}}/transactions/stats/summary
   body: none
   auth: inherit
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

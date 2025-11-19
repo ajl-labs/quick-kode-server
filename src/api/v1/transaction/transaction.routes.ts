@@ -9,8 +9,14 @@ transactionRouter.post("/", handle(transactionController, "addNewTransaction"));
 
 transactionRouter.put("/:id", handle(transactionController, "update"));
 transactionRouter.get(
-  "/dashboard/stats",
-  handle(transactionController, "getDashboardStats")
+  "/stats/summary",
+  handle(transactionController, "getStatsSummary")
 );
+
+transactionRouter.get(
+  "/stats/trends",
+  handle(transactionController, "getTransactionsTrends")
+);
+transactionRouter.delete("/:id", handle(transactionController, "delete"));
 
 export { transactionRouter };

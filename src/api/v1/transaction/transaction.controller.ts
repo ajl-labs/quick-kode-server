@@ -9,6 +9,11 @@ import { asyncHandler } from "../../../helpers/async.helper";
 import z from "zod";
 import { runGemini } from "../../../service/ai/exterinal.LLM.service";
 import { cleanAndParseJson } from "../../../helpers/data.parser";
+import {
+  endOfTheMonth,
+  startOfTheMonth,
+  subtractDays,
+} from "../../../helpers/date.helpers";
 export default class TransactionController extends MainController<ITransaction> {
   constructor(c: Context) {
     super(c, "transactions", TransactionSchema);
@@ -22,7 +27,7 @@ export default class TransactionController extends MainController<ITransaction> 
     return this.create(c);
   };
 
-  getDashboardStats = asyncHandler(async (c: Context) => {
+  getStatsSummary = asyncHandler(async (c: Context) => {
     const totalTransactions = await this.countRecords(this.table);
     const balance = await this.getLastRecord(this.table, "created_at");
     const totalFees = await this.sumColumn(this.table, "fees");
@@ -32,6 +37,78 @@ export default class TransactionController extends MainController<ITransaction> 
       totalFees,
     });
   });
+
+  getTransactionsTrends = asyncHandler(async (c: Context) => {
+    const startAt = c.req.query("start");
+    const endAt = c.req.query("end");
+
+    const [spendingByCategory, monthlySpending] = await Promise.all([
+      this.computeSpendingByCategory(),
+      this.computeMonthlySpending(startAt, endAt),
+    ]);
+    return c.json({
+      spendingByCategory,
+      monthlySpending,
+    });
+  });
+
+  private computeSpendingByCategory = async (
+    startAt?: Date | string,
+    endAt?: Date | string
+  ) => {
+    startAt = startOfTheMonth(startAt || subtractDays(new Date(), 30));
+    endAt = endOfTheMonth(endAt || new Date());
+    const queryString = `
+      SELECT lower(label) AS label,
+            SUM(amount) AS total_amount,
+            SUM(fees) AS total_fees
+      FROM transactions
+      WHERE label IS NOT NULL
+        AND lower(type) = lower(%L)
+        AND completed_at BETWEEN %L AND %L
+      GROUP BY lower(label);
+    `;
+    const query = this.format(
+      queryString,
+      "DEBIT",
+      startAt.toISOString(),
+      endAt.toISOString()
+    );
+    const result = await this.runQuery<{ label: string; total_amount: number }>(
+      query
+    );
+    return result?.rowCount ? result.rows : [];
+  };
+
+  private computeMonthlySpending = async (
+    startAt?: Date | string,
+    endAt?: Date | string
+  ) => {
+    startAt = startOfTheMonth(startAt || subtractDays(new Date(), 30 * 3));
+    endAt = endOfTheMonth(endAt || new Date());
+    const queryString = `
+      SELECT to_char(date_trunc('month', completed_at), 'YYYY-MM') AS month,
+        SUM(amount) AS total_amount,
+        SUM(fees) AS total_fees
+      FROM transactions
+      WHERE lower(type)=lower(%L)
+        AND completed_at BETWEEN %L AND %L
+      GROUP BY month
+      ORDER BY month;
+    `;
+    const query = this.format(
+      queryString,
+      "DEBIT",
+      startAt.toISOString(),
+      endAt.toISOString()
+    );
+    const result = await this.runQuery<{
+      month: string;
+      total_amount: number;
+      total_fees: number;
+    }>(query);
+    return result?.rowCount ? result.rows : [];
+  };
 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const { aiEnabled, ...body } = await c.req.json();

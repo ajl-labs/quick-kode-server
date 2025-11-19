@@ -49,4 +49,16 @@ export class MainController<T> extends DatabaseModel {
     }
     return this.context.json(updatedRecord, 200);
   });
+
+  delete = asyncHandler(async () => {
+    const id = this.context.req.param("id");
+    if (!id) {
+      return this.context.json({ error: "ID is required" }, 400);
+    }
+    const deleted = await this.deleteRecord(this.table, id);
+    if (!deleted) {
+      return this.context.json({ error: "Record not found" }, 404);
+    }
+    return this.context.json({ message: "Record deleted successfully" }, 200);
+  });
 }

@@ -1,0 +1,15 @@
+meta {
+  name: /delete-transactions
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{BASE_URL}}/transactions/23026318-901c-4b17-8bc4-8e1b33fd2cb8
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

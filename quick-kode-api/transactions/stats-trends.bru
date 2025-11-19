@@ -1,0 +1,21 @@
+meta {
+  name: /stats-trends
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{BASE_URL}}/transactions/stats/trends?start=2022-01&end=2025-11
+  body: none
+  auth: inherit
+}
+
+params:query {
+  start: 2022-01
+  end: 2025-11
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

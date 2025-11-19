@@ -4,10 +4,14 @@ import { Context } from "hono";
 
 export class DatabaseModel {
   context?: Context;
+  format = format;
+  quoteIdent = quoteIdent;
+  quoteLiteral = quoteLiteral;
   constructor(context?: Context) {
     this.context = context;
   }
-  private runQuery = async <T extends QueryResultRow>(
+
+  runQuery = async <T extends QueryResultRow>(
     queryText: string,
     params?: any[]
   ) => {
@@ -74,7 +78,11 @@ export class DatabaseModel {
     return result.rows[0] as IDatabaseRecord<T> | null;
   };
 
-  softDelete = async () => {};
+  deleteRecord = async (table: string, id: string): Promise<boolean> => {
+    const query = format("DELETE FROM %I WHERE id = %L RETURNING *", table, id);
+    const result = await this.runQuery(query);
+    return Boolean(result.rowCount);
+  };
 
   countRecords = async (table: string) => {
     const query = format("SELECT COUNT(*) FROM %I", table);
