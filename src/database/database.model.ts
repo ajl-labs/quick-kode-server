@@ -1,6 +1,7 @@
 import { PoolClient, QueryResult, QueryResultRow } from "pg";
 import { format, quoteIdent, quoteLiteral } from "node-pg-format";
 import { Context } from "hono";
+import { decodeCursor, encodeCursor } from "../helpers/query.helpers";
 
 export class DatabaseModel {
   context?: Context;
@@ -13,7 +14,7 @@ export class DatabaseModel {
 
   runQuery = async <T extends QueryResultRow>(
     queryText: string,
-    params?: any[]
+    params?: any[],
   ) => {
     const client = this.context?.get("db") as PoolClient;
     try {
@@ -34,27 +35,80 @@ export class DatabaseModel {
       "INSERT INTO %I (%s) VALUES (%s) RETURNING *",
       table,
       keys.map((k) => quoteIdent(k)).join(", "),
-      values.map((v) => quoteLiteral(v)).join(", ")
+      values.map((v) => quoteLiteral(v)).join(", "),
     );
 
     const result = await this.runQuery(query);
     return result.rows[0];
   };
 
-  findAll = async <T>(
+  findAllVectorSearch = async <T>(
     table: string,
-    options: { limit: number; offset: number }
+    options: {
+      limit: number;
+      cursor?: string;
+      searchText?: string;
+    },
   ) => {
+    let cursorCreatedAt = null;
+    let cursorId = null;
+
+    if (options.cursor) {
+      ({ created_at: cursorCreatedAt, id: cursorId } = decodeCursor(
+        options.cursor,
+      ));
+    }
+    let searchQuery = "";
+    if (options.searchText) {
+      searchQuery = "AND t.search_vector @@ plainto_tsquery('english', %L)";
+      // for transaction ensure that phone number is well captured
+      if (table == "transactions") {
+        searchQuery =
+          "AND (t.search_vector @@ plainto_tsquery('english', %L) OR t.phone_number ILIKE %L)";
+      }
+      searchQuery = format(
+        searchQuery,
+        options.searchText,
+        `%${options.searchText}%`,
+      );
+    }
+
     const query = format(
-      "SELECT * FROM %I ORDER BY created_at DESC LIMIT %L OFFSET %L;",
+      `
+        WITH cursor AS (
+          SELECT
+            %L::timestamptz AS cur_created_at,
+            %L::uuid AS cur_id
+        )
+        SELECT t.*
+        FROM %I AS t, cursor c
+        WHERE
+          (%L IS NULL OR (t.created_at, t.id) < (c.cur_created_at, c.cur_id))
+          ${searchQuery}
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT %L;
+      `,
+      cursorCreatedAt,
+      cursorId,
       table,
+      options.cursor, // for (%L IS NULL)
       options.limit,
-      options.offset
     );
+
     const result = await this.runQuery(query);
+    let nextCursor: string | null = null;
+    if (result.rows.length === options.limit) {
+      const lastItem = result.rows[result.rows.length - 1];
+      nextCursor = encodeCursor({
+        id: lastItem.id,
+        created_at: lastItem.created_at,
+      });
+    }
+
     return {
       data: result.rows as IDatabaseRecord<T>[],
-      total: result.rowCount ?? 0,
+      cursor: options.cursor,
+      nextCursor,
     };
   };
 
@@ -72,7 +126,7 @@ export class DatabaseModel {
       "UPDATE %I SET %s WHERE id = %L RETURNING *",
       table,
       setClause,
-      id
+      id,
     );
     const result = await this.runQuery(query);
     return result.rows[0] as IDatabaseRecord<T> | null;
@@ -98,12 +152,12 @@ export class DatabaseModel {
 
   getLastRecord = async <T>(
     table: string,
-    orderBy: "created_at" | "updated_at" | "completed_at" = "created_at"
+    orderBy: "created_at" | "updated_at" | "completed_at" = "created_at",
   ) => {
     const query = format(
       "SELECT * FROM %I ORDER BY %I DESC LIMIT 1",
       table,
-      orderBy
+      orderBy,
     );
     const result = await this.runQuery(query);
     return result.rows[0];

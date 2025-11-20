@@ -1,12 +1,10 @@
-import { getPagination } from "./query.helpers";
 import { ZodObject, ZodRawShape } from "zod";
 import { Context } from "hono";
 import { DatabaseModel } from "../database/database.model";
 import { asyncHandler } from "./async.helper";
 
 export class MainController<T> extends DatabaseModel {
-  limit: number = 150;
-  page: number = 1;
+  limit: number = 25;
   table: string;
   schema?: ZodObject<ZodRawShape>;
   context: Context;
@@ -20,12 +18,16 @@ export class MainController<T> extends DatabaseModel {
     this.context = c;
   }
 
-  getAll = asyncHandler(async () => {
+  getAllWithSearch = asyncHandler(async () => {
     const limit =
       parseInt(this.context.req.query("limit") as string) || this.limit;
-    const page =
-      parseInt(this.context.req.query("page") as string) || this.page;
-    const data = await this.findAll<T>(this.table, getPagination(page, limit));
+    const cursor = this.context.req.query("cursor") as string;
+    const searchText = this.context.req.query("search") as string;
+    const data = await this.findAllVectorSearch<T>(this.table, {
+      limit,
+      cursor,
+      searchText,
+    });
     return this.context.json(data, 200);
   });
 
