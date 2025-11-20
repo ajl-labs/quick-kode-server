@@ -5,14 +5,13 @@ meta {
 }
 
 get {
-  url: {{BASE_URL}}/transactions/stats/trends?start=2022-01&end=2025-11
+  url: {{BASE_URL}}/transactions/stats/trends?period=week
   body: none
   auth: inherit
 }
 
 params:query {
-  start: 2022-01
-  end: 2025-11
+  period: week
 }
 
 settings {

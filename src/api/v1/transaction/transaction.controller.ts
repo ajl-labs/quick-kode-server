@@ -11,6 +11,8 @@ import { runGemini } from "../../../service/ai/exterinal.LLM.service";
 import { cleanAndParseJson } from "../../../helpers/data.parser";
 import {
   endOfTheMonth,
+  PERIODS,
+  PERIODS_FORMAT,
   startOfTheMonth,
   subtractDays,
 } from "../../../helpers/date.helpers";
@@ -41,67 +43,84 @@ export default class TransactionController extends MainController<ITransaction> 
   getTransactionsTrends = asyncHandler(async (c: Context) => {
     const startAt = c.req.query("start");
     const endAt = c.req.query("end");
+    const period = c.req.query("period");
 
-    const [spendingByCategory, monthlySpending] = await Promise.all([
-      this.computeSpendingByCategory(),
-      this.computeMonthlySpending(startAt, endAt),
+    const [spendingByCategory, spendingByPeriod] = await Promise.all([
+      this.computeSpendingByCategory(startAt, endAt),
+      this.computeSpendingByPeriod(startAt, endAt, period as PERIODS),
     ]);
     return c.json({
       spendingByCategory,
-      monthlySpending,
+      spendingByPeriod,
     });
   });
 
   private computeSpendingByCategory = async (
     startAt?: Date | string,
-    endAt?: Date | string
+    endAt?: Date | string,
   ) => {
     startAt = startOfTheMonth(startAt || subtractDays(new Date(), 30));
     endAt = endOfTheMonth(endAt || new Date());
     const queryString = `
-      SELECT lower(label) AS label,
-            SUM(amount) AS total_amount,
-            SUM(fees) AS total_fees
+      SELECT
+        lower(label) AS label,
+        SUM(amount) AS total_amount,
+        SUM(fees) AS total_fees,
+        COUNT(*) AS total_transactions
       FROM transactions
       WHERE label IS NOT NULL
         AND lower(type) = lower(%L)
         AND completed_at BETWEEN %L AND %L
-      GROUP BY lower(label);
+      GROUP BY lower(label)
+      ORDER BY total_amount DESC
+      LIMIT 5;
     `;
     const query = this.format(
       queryString,
       "DEBIT",
       startAt.toISOString(),
-      endAt.toISOString()
+      endAt.toISOString(),
     );
     const result = await this.runQuery<{ label: string; total_amount: number }>(
-      query
+      query,
     );
     return result?.rowCount ? result.rows : [];
   };
 
-  private computeMonthlySpending = async (
+  private computeSpendingByPeriod = async (
     startAt?: Date | string,
-    endAt?: Date | string
+    endAt?: Date | string,
+    period?: keyof typeof PERIODS_FORMAT,
   ) => {
-    startAt = startOfTheMonth(startAt || subtractDays(new Date(), 30 * 3));
+    period = period || PERIODS.WEEK;
+    let totalDays = 30;
+
+    if (period === PERIODS.WEEK) totalDays = totalDays * 4;
+    if (period === PERIODS.MONTH) totalDays = totalDays * 30;
+    if (period === PERIODS.YEAR) totalDays = totalDays * 365;
+
+    startAt = startOfTheMonth(startAt || subtractDays(new Date(), totalDays));
     endAt = endOfTheMonth(endAt || new Date());
     const queryString = `
-      SELECT to_char(date_trunc('month', completed_at), 'YYYY-MM') AS month,
+      SELECT
+        to_char(date_trunc('${period}', created_at), '${PERIODS_FORMAT[period]}') AS label,
         SUM(amount) AS total_amount,
-        SUM(fees) AS total_fees
+        SUM(fees) AS total_fees,
+        COUNT(*) AS total_transactions
       FROM transactions
       WHERE lower(type)=lower(%L)
-        AND completed_at BETWEEN %L AND %L
-      GROUP BY month
-      ORDER BY month;
+        AND created_at BETWEEN %L AND %L
+      GROUP BY date_trunc('${period}', created_at)
+      ORDER BY date_trunc('${period}', created_at);
     `;
+
     const query = this.format(
       queryString,
       "DEBIT",
       startAt.toISOString(),
-      endAt.toISOString()
+      endAt.toISOString(),
     );
+
     const result = await this.runQuery<{
       month: string;
       total_amount: number;
@@ -116,28 +135,28 @@ export default class TransactionController extends MainController<ITransaction> 
     const aiInstruction =
       "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
     const aiContent = `
-            Extract payment info from the SMS below and return only one valid JSON object matching this schema: 
+            Extract payment info from the SMS below and return only one valid JSON object matching this schema:
               SMS: "${payload.message}"
               Schema: "${z.toJSONSchema(TransactionSchema)}"
 
-            Rules: 
+            Rules:
              - phone_number: ${payload.phone_number}
              - SMS sender -> ${payload.sender}
              - message -> ${payload.message}
-             - type must be 'DEBIT' or 'CREDIT'. 
-             - Identify transaction category, and set it to be one of: 'transfer','withdrawal','goods_payment','airtime_purchase','loan_payment','fund_transfer', 'loan_disbursement','refund','deposit','other'. 
-             - amount and fees must be numbers only (no currency symbol); fees default to 0 if missing. 
-             - date must be ISO8601 UTC; if missing use current UTC datetime. 
-             - payment_code and transaction_reference must be string or null. 
+             - type must be 'DEBIT' or 'CREDIT'.
+             - Identify transaction category, and set it to be one of: 'transfer','withdrawal','goods_payment','airtime_purchase','loan_payment','fund_transfer', 'loan_disbursement','refund','deposit','other'.
+             - amount and fees must be numbers only (no currency symbol); fees default to 0 if missing.
+             - date must be ISO8601 UTC; if missing use current UTC datetime.
+             - payment_code and transaction_reference must be string or null.
              - Balance which is remaining_balance must be a number or null.
-             - If sender missing set 'sender':'self'. 
-             - If recipient missing set 'recipient':'self'. 
-             - Generate summary based on the message and transaction category identified. e.g of summary: 
-                 - if it is transfer then "Money transferred to John", 
-                 - if money was received then "Received money from Jane", 
-                 - if it is a loan then "Received loan from MoCash", 
+             - If sender missing set 'sender':'self'.
+             - If recipient missing set 'recipient':'self'.
+             - Generate summary based on the message and transaction category identified. e.g of summary:
+                 - if it is transfer then "Money transferred to John",
+                 - if money was received then "Received money from Jane",
+                 - if it is a loan then "Received loan from MoCash",
                  - if it is a payment or a transaction then "Paid good/service to AJL Ltd", etc..
-             - If the message is not a transaction message return null. 
+             - If the message is not a transaction message return null.
              - Output JSON only—no text, explanation, or code blocks.
                 `;
 
@@ -165,7 +184,7 @@ export default class TransactionController extends MainController<ITransaction> 
                 content: aiContent,
               },
             ],
-          }
+          },
         ).catch((err: any) => {
           throw err;
         });
@@ -179,7 +198,7 @@ export default class TransactionController extends MainController<ITransaction> 
           error: "Invalid transaction message",
           code: "INVALID_TRANSACTION_MESSAGE",
         },
-        400
+        400,
       );
     }
 
@@ -194,13 +213,13 @@ export default class TransactionController extends MainController<ITransaction> 
         ? new Date(payload.message_timestamp)
         : defaultData,
       completed_at: new Date(
-        response.completed_at || defaultData
+        response.completed_at || defaultData,
       ).toISOString(),
     });
 
     const newRecord = await this.createRecord<IDatabaseRecord<ITransaction>>(
       this.table,
-      transactionPayload!
+      transactionPayload!,
     );
     return this.context.json(newRecord, 201);
   });

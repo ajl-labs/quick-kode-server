@@ -27,3 +27,17 @@ export const subtractDays = (date: Date | string, days: number) => {
 export const addDays = (date: Date | string, days: number) => {
   return dayjs(date).add(days, "day").toDate();
 };
+
+export enum PERIODS {
+  DAY = "day",
+  WEEK = "week",
+  MONTH = "month",
+  YEAR = "year",
+}
+
+export const PERIODS_FORMAT: Record<PERIODS, string> = {
+  [PERIODS.DAY]: "YYYY-MM-DD",
+  [PERIODS.WEEK]: "YYYY-MM-DD",
+  [PERIODS.MONTH]: "YYYY-MM",
+  [PERIODS.YEAR]: "YYYY",
+};
