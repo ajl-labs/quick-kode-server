@@ -5,7 +5,7 @@ import { DatabaseModel } from "../database/database.model";
 import { asyncHandler } from "./async.helper";
 
 export class MainController<T> extends DatabaseModel {
-  limit: number = 25;
+  limit: number = 150;
   page: number = 1;
   table: string;
   schema?: ZodObject<ZodRawShape>;
