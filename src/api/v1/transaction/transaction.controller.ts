@@ -71,9 +71,7 @@ export default class TransactionController extends MainController<ITransaction> 
       WHERE label IS NOT NULL
         AND lower(type) = lower(%L)
         AND completed_at BETWEEN %L AND %L
-      GROUP BY lower(label)
-      ORDER BY total_amount DESC
-      LIMIT 5;
+      GROUP BY lower(label);
     `;
     const query = this.format(
       queryString,
