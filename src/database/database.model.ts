@@ -107,7 +107,7 @@ export class DatabaseModel {
 
     return {
       data: result.rows as IDatabaseRecord<T>[],
-      cursor: options.cursor,
+      currentCursor: options.cursor,
       nextCursor,
     };
   };
