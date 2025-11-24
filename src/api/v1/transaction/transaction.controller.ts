@@ -93,9 +93,8 @@ export default class TransactionController extends MainController<ITransaction> 
     period = period || PERIODS.WEEK;
     let totalDays = 30;
 
-    if (period === PERIODS.WEEK) totalDays = totalDays * 4;
-    if (period === PERIODS.MONTH) totalDays = totalDays * 30;
-    if (period === PERIODS.YEAR) totalDays = totalDays * 365;
+    if (period === PERIODS.MONTH) totalDays = totalDays * 3;
+    if (period === PERIODS.YEAR) totalDays = totalDays * 12;
 
     startAt = startOfTheMonth(startAt || subtractDays(new Date(), totalDays));
     endAt = endOfTheMonth(endAt || new Date());
