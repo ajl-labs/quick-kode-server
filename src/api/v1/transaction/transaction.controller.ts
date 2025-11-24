@@ -146,6 +146,17 @@ export default class TransactionController extends MainController<ITransaction> 
           409,
         );
     }
+
+    if (payload.message.toLowerCase().includes("failed")) {
+      return this.context.json(
+        {
+          error: "Invalid transaction message",
+          code: "INVALID_TRANSACTION_MESSAGE",
+        },
+        400,
+      );
+    }
+
     if (payload.message.toLowerCase().includes("failed")) return;
     const aiInstruction =
       "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
@@ -207,8 +218,10 @@ export default class TransactionController extends MainController<ITransaction> 
         return cleanAndParseJson(llamaResponse);
       });
 
-    if (!response?.amount && !body?.message?.includes("RWF")) {
-      console.log("Invalid transaction message:", payload.message);
+    if (
+      (!response?.amount && !body?.message?.includes("RWF")) ||
+      response.summary?.toLowerCase().includes("failed")
+    ) {
       return this.context.json(
         {
           error: "Invalid transaction message",
