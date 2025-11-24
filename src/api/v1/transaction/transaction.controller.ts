@@ -130,6 +130,23 @@ export default class TransactionController extends MainController<ITransaction> 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const { aiEnabled, ...body } = await c.req.json();
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
+    console.log(payload);
+    if (payload?.message_id) {
+      const existingRecord = await this.findOneBy(
+        this.table,
+        "message_id",
+        payload.message_id,
+      );
+      if (existingRecord)
+        return this.context.json(
+          {
+            error: "Transaction already exists",
+            code: "TRANSACTION_ALREADY_EXISTS",
+          },
+          409,
+        );
+    }
+    if (payload.message.toLowerCase().includes("failed")) return;
     const aiInstruction =
       "Extract payment info from SMS and return only valid JSON, no text or code blocks.";
     const aiContent = `
@@ -156,6 +173,7 @@ export default class TransactionController extends MainController<ITransaction> 
                  - if it is a payment or a transaction then "Paid good/service to AJL Ltd", etc..
              - If the message is not a transaction message return null.
              - Output JSON only—no text, explanation, or code blocks.
+             - Return empty object for: failed transaction, none transaction
                 `;
 
     const response = await runGemini(aiInstruction, aiContent)

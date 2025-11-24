@@ -27,6 +27,7 @@ export const TransactionSchema = transactionCommonSchema.extend({
   fees: zod.number().min(0).default(0),
   type: zod.enum(["DEBIT", "CREDIT"]),
   message: zod.string(),
+  message_id: zod.string().optional(),
   recipient: zod.string().optional(),
   completed_at: zod.string().optional().nullable(),
   label: zod.string().optional().nullable(),

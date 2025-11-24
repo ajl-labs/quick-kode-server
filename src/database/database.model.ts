@@ -1,7 +1,11 @@
 import { PoolClient, QueryResult, QueryResultRow } from "pg";
 import { format, quoteIdent, quoteLiteral } from "node-pg-format";
 import { Context } from "hono";
-import { decodeCursor, encodeCursor } from "../helpers/query.helpers";
+import {
+  buildWhereClause,
+  decodeCursor,
+  encodeCursor,
+} from "../helpers/query.helpers";
 
 export class DatabaseModel {
   context?: Context;
@@ -114,6 +118,18 @@ export class DatabaseModel {
 
   findById = async <T>(table: string, id: string) => {
     const query = format("SELECT * FROM %I WHERE id = %L", table, id);
+    const result = await this.runQuery(query);
+    return result.rows[0] as IDatabaseRecord<T> | null;
+  };
+
+  findOneBy = async <T>(table: string, column: string, value: any) => {
+    const query = format(
+      "SELECT * FROM %I WHERE %I = %L",
+      table,
+      column,
+      value,
+    );
+    console.log(query);
     const result = await this.runQuery(query);
     return result.rows[0] as IDatabaseRecord<T> | null;
   };
