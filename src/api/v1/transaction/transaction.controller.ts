@@ -130,7 +130,6 @@ export default class TransactionController extends MainController<ITransaction> 
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const { aiEnabled, ...body } = await c.req.json();
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);
-    console.log(payload);
     if (payload?.message_id) {
       const existingRecord = await this.findOneBy(
         this.table,
