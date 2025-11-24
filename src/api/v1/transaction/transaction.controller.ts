@@ -43,11 +43,20 @@ export default class TransactionController extends MainController<ITransaction> 
   getTransactionsTrends = asyncHandler(async (c: Context) => {
     const startAt = c.req.query("start");
     const endAt = c.req.query("end");
-    const period = c.req.query("period");
+    let period = c.req.query("period");
+
+    period = period || PERIODS.WEEK;
+    let totalDays = 30;
+
+    if (period === PERIODS.MONTH) totalDays = totalDays * 3;
+    if (period === PERIODS.YEAR) totalDays = totalDays * 12;
+
+    let startAtDate = new Date(startAt || subtractDays(new Date(), totalDays));
+    let endAtDate = new Date(endAt || new Date());
 
     const [spendingByCategory, spendingByPeriod] = await Promise.all([
-      this.computeSpendingByCategory(startAt, endAt),
-      this.computeSpendingByPeriod(startAt, endAt, period as PERIODS),
+      this.computeSpendingByCategory(startAtDate, endAtDate),
+      this.computeSpendingByPeriod(startAtDate, endAtDate, period as PERIODS),
     ]);
     return c.json({
       spendingByCategory,
@@ -55,12 +64,7 @@ export default class TransactionController extends MainController<ITransaction> 
     });
   });
 
-  private computeSpendingByCategory = async (
-    startAt?: Date | string,
-    endAt?: Date | string,
-  ) => {
-    startAt = startOfTheMonth(startAt || subtractDays(new Date(), 30));
-    endAt = endOfTheMonth(endAt || new Date());
+  private computeSpendingByCategory = async (startAt: Date, endAt: Date) => {
     const queryString = `
       SELECT
         lower(label) AS label,
@@ -86,18 +90,10 @@ export default class TransactionController extends MainController<ITransaction> 
   };
 
   private computeSpendingByPeriod = async (
-    startAt?: Date | string,
-    endAt?: Date | string,
-    period?: keyof typeof PERIODS_FORMAT,
+    startAt: Date | string,
+    endAt: Date | string,
+    period: keyof typeof PERIODS_FORMAT,
   ) => {
-    period = period || PERIODS.WEEK;
-    let totalDays = 30;
-
-    if (period === PERIODS.MONTH) totalDays = totalDays * 3;
-    if (period === PERIODS.YEAR) totalDays = totalDays * 12;
-
-    startAt = startOfTheMonth(startAt || subtractDays(new Date(), totalDays));
-    endAt = endOfTheMonth(endAt || new Date());
     const queryString = `
       SELECT
         to_char(date_trunc('${period}', created_at), '${PERIODS_FORMAT[period]}') AS label,
