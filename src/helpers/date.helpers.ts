@@ -28,16 +28,16 @@ export const addDays = (date: Date | string, days: number) => {
   return dayjs(date).add(days, "day").toDate();
 };
 
-export enum PERIODS {
+export enum GRANULARITY {
   DAY = "day",
   WEEK = "week",
   MONTH = "month",
   YEAR = "year",
 }
 
-export const PERIODS_FORMAT: Record<PERIODS, string> = {
-  [PERIODS.DAY]: "YYYY-MM-DD",
-  [PERIODS.WEEK]: "YYYY-MM-DD",
-  [PERIODS.MONTH]: "YYYY-MM",
-  [PERIODS.YEAR]: "YYYY",
+export const GRANULARITY_FORMAT: Record<GRANULARITY, string> = {
+  [GRANULARITY.DAY]: "YYYY-MM-DD",
+  [GRANULARITY.WEEK]: "YYYY-MM-DD",
+  [GRANULARITY.MONTH]: "YYYY-MM",
+  [GRANULARITY.YEAR]: "YYYY",
 };

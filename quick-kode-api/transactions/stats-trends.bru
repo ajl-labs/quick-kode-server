@@ -5,13 +5,14 @@ meta {
 }
 
 get {
-  url: {{BASE_URL}}/transactions/stats/trends?period=week
+  url: {{BASE_URL}}/transactions/stats/trends?period=week&months=3
   body: none
   auth: inherit
 }
 
 params:query {
   period: week
+  months: 3
 }
 
 settings {

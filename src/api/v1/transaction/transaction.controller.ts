@@ -10,10 +10,8 @@ import z from "zod";
 import { runGemini } from "../../../service/ai/exterinal.LLM.service";
 import { cleanAndParseJson } from "../../../helpers/data.parser";
 import {
-  endOfTheMonth,
-  PERIODS,
-  PERIODS_FORMAT,
-  startOfTheMonth,
+  GRANULARITY,
+  GRANULARITY_FORMAT,
   subtractDays,
 } from "../../../helpers/date.helpers";
 export default class TransactionController extends MainController<ITransaction> {
@@ -30,33 +28,44 @@ export default class TransactionController extends MainController<ITransaction> 
   };
 
   getStatsSummary = asyncHandler(async (c: Context) => {
-    const totalTransactions = await this.countRecords(this.table);
-    const balance = await this.getLastRecord(this.table, "created_at");
-    const totalFees = await this.sumColumn(this.table, "fees");
+    const granularity = c.req.query("granularity") || GRANULARITY.MONTH;
+    const months = c.req.query("months") || "12";
+
+    const endDate = new Date();
+    const startDate = subtractDays(endDate, parseInt(months) * 30);
+
+    const [balance, totalFees, transactionAverages] = await Promise.all([
+      this.getLastRecord(this.table, "created_at"),
+      this.sumColumn(this.table, "fees"),
+      this.computeTransactionAverages(
+        granularity as keyof typeof GRANULARITY_FORMAT,
+        startDate,
+        endDate,
+      ),
+    ]);
+
     return c.json({
-      totalTransactions,
       balance: balance?.remaining_balance || 0,
       totalFees,
+      ...transactionAverages,
     });
   });
 
   getTransactionsTrends = asyncHandler(async (c: Context) => {
-    const startAt = c.req.query("start");
-    const endAt = c.req.query("end");
-    let period = c.req.query("period");
+    const months = c.req.query("months") || "12";
+    const endDate = new Date();
+    const startDate = subtractDays(endDate, parseInt(months) * 30);
+    let granularity = c.req.query("granularity");
 
-    period = period || PERIODS.WEEK;
-    let totalDays = 30;
-
-    if (period === PERIODS.MONTH) totalDays = totalDays * 3;
-    if (period === PERIODS.YEAR) totalDays = totalDays * 12;
-
-    let startAtDate = new Date(startAt || subtractDays(new Date(), totalDays));
-    let endAtDate = new Date(endAt || new Date());
+    granularity = granularity || GRANULARITY.WEEK;
 
     const [spendingByCategory, spendingByPeriod] = await Promise.all([
-      this.computeSpendingByCategory(startAtDate, endAtDate),
-      this.computeSpendingByPeriod(startAtDate, endAtDate, period as PERIODS),
+      this.computeSpendingByCategory(startDate, endDate),
+      this.computeSpendingByPeriod(
+        granularity as GRANULARITY,
+        startDate,
+        endDate,
+      ),
     ]);
     return c.json({
       spendingByCategory,
@@ -64,7 +73,10 @@ export default class TransactionController extends MainController<ITransaction> 
     });
   });
 
-  private computeSpendingByCategory = async (startAt: Date, endAt: Date) => {
+  private computeSpendingByCategory = async (
+    startDate: Date,
+    endDate: Date,
+  ) => {
     const queryString = `
       SELECT
         lower(label) AS label,
@@ -74,14 +86,14 @@ export default class TransactionController extends MainController<ITransaction> 
       FROM transactions
       WHERE label IS NOT NULL
         AND lower(type) = lower(%L)
-        AND completed_at BETWEEN %L AND %L
+        AND created_at BETWEEN %L AND %L
       GROUP BY lower(label);
     `;
     const query = this.format(
       queryString,
       "DEBIT",
-      startAt.toISOString(),
-      endAt.toISOString(),
+      startDate.toISOString(),
+      endDate.toISOString(),
     );
     const result = await this.runQuery<{ label: string; total_amount: number }>(
       query,
@@ -90,28 +102,28 @@ export default class TransactionController extends MainController<ITransaction> 
   };
 
   private computeSpendingByPeriod = async (
-    startAt: Date | string,
-    endAt: Date | string,
-    period: keyof typeof PERIODS_FORMAT,
+    granularity: keyof typeof GRANULARITY_FORMAT,
+    startDate: Date,
+    endDate: Date,
   ) => {
     const queryString = `
       SELECT
-        to_char(date_trunc('${period}', created_at), '${PERIODS_FORMAT[period]}') AS label,
+        to_char(date_trunc('${granularity}', created_at), '${GRANULARITY_FORMAT[granularity]}') AS label,
         SUM(amount) AS total_amount,
         SUM(fees) AS total_fees,
         COUNT(*) AS total_transactions
       FROM transactions
       WHERE lower(type)=lower(%L)
         AND created_at BETWEEN %L AND %L
-      GROUP BY date_trunc('${period}', created_at)
-      ORDER BY date_trunc('${period}', created_at);
+      GROUP BY date_trunc('${granularity}', created_at)
+      ORDER BY date_trunc('${granularity}', created_at);
     `;
 
     const query = this.format(
       queryString,
       "DEBIT",
-      startAt.toISOString(),
-      endAt.toISOString(),
+      startDate.toISOString(),
+      endDate.toISOString(),
     );
 
     const result = await this.runQuery<{
@@ -121,7 +133,38 @@ export default class TransactionController extends MainController<ITransaction> 
     }>(query);
     return result?.rowCount ? result.rows : [];
   };
+  private computeTransactionAverages = async (
+    granularity: keyof typeof GRANULARITY_FORMAT,
+    startDate: Date,
+    endDate: Date,
+  ) => {
+    const query = this.format(
+      `
+      WITH amount_by_months AS (
+        SELECT
+          DATE_TRUNC('${granularity}', transactions.created_at) AS month,
+          SUM(transactions.amount) AS total,
+          COUNT(*) AS count
+        FROM transactions
+        WHERE lower(transactions.type) = 'debit'
+        AND created_at BETWEEN %L AND %L
+        GROUP BY month
+        ORDER BY month
+      )
+      SELECT AVG(total) AS averageSpending,
+             SUM(count) AS totalTransactions
+      FROM amount_by_months;
+      `,
+      startDate.toISOString(),
+      endDate.toISOString(),
+    );
 
+    const result = await this.runQuery<{
+      month: string;
+      average_spending: number;
+    }>(query);
+    return result.rows?.[0];
+  };
   createFromAIPrompt = asyncHandler(async (c: Context) => {
     const { aiEnabled, ...body } = await c.req.json();
     const payload = await TransactionPayloadAISchema.strict().parseAsync(body);

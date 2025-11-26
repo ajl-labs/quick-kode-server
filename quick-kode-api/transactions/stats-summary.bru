@@ -5,9 +5,13 @@ meta {
 }
 
 get {
-  url: {{BASE_URL}}/transactions/stats/summary
+  url: {{BASE_URL}}/transactions/stats/summary?period=year
   body: none
   auth: inherit
+}
+
+params:query {
+  period: year
 }
 
 settings {
